@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceRequest
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.content.Context
@@ -59,6 +60,17 @@ class MainActivity : Activity() {
     type = "application/json"
    }
    startActivityForResult(intent, IMPORT_REQUEST)
+  } }
+  @JavascriptInterface fun printHtml(html: String) { runOnUiThread {
+   val printable = WebView(this@MainActivity)
+   printable.settings.javaScriptEnabled = false
+   printable.webViewClient = object : WebViewClient() {
+    override fun onPageFinished(view: WebView?, url: String?) {
+     val manager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+     manager.print("GIGA TALHAS - OS", printable.createPrintDocumentAdapter("OS Giga Talhas"), PrintAttributes.Builder().build())
+    }
+   }
+   printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
   } }
   @JavascriptInterface fun printOs() { runOnUiThread {
    val manager = getSystemService(Context.PRINT_SERVICE) as PrintManager
