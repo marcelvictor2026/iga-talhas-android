@@ -1,0 +1,1 @@
+O arquivo .github/workflows/android.yml deve estar na raiz do repositorio, junto com app/, build.gradle.kts e settings.gradle.kts. A compilacao sera executada em Actions. O APK de teste sera disponibilizado como artifact GIGA-TALHAS-APK se a compilacao passar.
