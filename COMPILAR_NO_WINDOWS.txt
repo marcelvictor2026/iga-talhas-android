@@ -1,0 +1,12 @@
+GIGA TALHAS — PROJETO CONSOLIDADO 0.3
+
+1. Instale o Android Studio no Windows.
+2. Extraia este ZIP.
+3. No Android Studio, escolha Open e selecione a pasta GigaTalhas.
+4. Aguarde a sincronizacao do Gradle e instale o SDK 35 se solicitado.
+5. Menu Build > Build Bundle(s) / APK(s) > Build APK(s).
+6. O APK de teste costuma ser criado em app/build/outputs/apk/debug/app-debug.apk.
+
+ATENCAO: este ZIP e codigo-fonte, NAO e um APK compilado.
+O prototipo ainda nao inclui fotos persistentes nem anexos fotograficos no PDF.
+O armazenamento usa localStorage e nao oferece auditoria antifraude.
