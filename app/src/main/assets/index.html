@@ -185,7 +185,7 @@ function validarCamposOs(){
  if(!cadastro.tecnicoAssinatura)faltas.push('Cadastrar a assinatura do técnico em Configurações.');
  if(com&&!resp.value.trim())faltas.push('Informar o nome do responsável pelo cliente.');
  if(com&&!assinou('sigCli'))faltas.push('Coletar a assinatura do responsável pelo cliente.');
- if(!dataStore.ativa||!dataStore.talhas.some(t=>t.id===dataStore.ativa.talhaId))faltas.push('Selecionar um equipamento e iniciar a ordem de serviço.');
+ if(!dataStore.ativa||!talhasDoCliente().some(t=>t.id===dataStore.ativa.talhaId))faltas.push('Selecionar um equipamento e iniciar a ordem de serviço.');
  for(let i=0;i<itens.length;i++){
   const el=$('c'+i);if(!el)continue;
   el.classList.remove('campo-ok','campo-pendente','check-amarelo','check-vermelho','check-verde','check-neutro');
@@ -220,8 +220,8 @@ document.addEventListener('change',e=>{if(e.target.closest('#os'))validarCamposO
 validarCamposOs();
 const dt=iso=>new Date(iso).toLocaleString('pt-BR');
 function toggleAss(){let com=$('modoAss').value==='com';$('areaAss').classList.toggle('hide',!com);$('areaNomeResp').classList.toggle('hide',!com);if(!com)$('respCli').value='';validarCamposOs()}
-function abrirOuContinuar(){if(!dataStore.talhas.length)return alert('Cadastre uma talha antes de abrir a O.S.');page('os');if(!dataStore.ativa)iniciarOsSelecionada();else mostrarAtiva();validarCamposOs()}
-function iniciarOsSelecionada(){if(dataStore.ativa)return mostrarAtiva();let id=$('talha').value;if(!dataStore.talhas.some(t=>t.id===id))return alert('Selecione um equipamento cadastrado');let numero=String(dataStore.proximoNumero++).padStart(5,'0');dataStore.ativa={numero,inicio:new Date().toISOString(),talhaId:id};persist();mostrarAtiva()}
+function abrirOuContinuar(){if(!dataStore.cliente.id)return alert('Selecione um cliente na lista antes de abrir a O.S.');if(!talhasDoCliente().length)return alert('Cadastre uma talha para o cliente selecionado antes de abrir a O.S.');page('os');if(!dataStore.ativa)iniciarOsSelecionada();else mostrarAtiva();validarCamposOs()}
+function iniciarOsSelecionada(){if(dataStore.ativa)return mostrarAtiva();let id=$('talha').value;if(!talhasDoCliente().some(t=>t.id===id))return alert('Selecione um equipamento deste cliente');let numero=String(dataStore.proximoNumero++).padStart(5,'0');dataStore.ativa={numero,inicio:new Date().toISOString(),talhaId:id};persist();mostrarAtiva()}
 function selecionarTalha(){if(dataStore.ativa&&$('talha').value!==dataStore.ativa.talhaId){$('talha').value=dataStore.ativa.talhaId;alert('Finalize a O.S. atual antes de iniciar outro equipamento.')}}
 function mostrarAtiva(){let a=dataStore.ativa;$('osNum').textContent=a?a.numero:'Nenhuma O.S. aberta';$('osInicio').textContent=a?dt(a.inicio):'—';$('osEstado').textContent=a?'O.S. em execução: uma nova O.S. só poderá ser aberta após o fechamento.':'O.S. encerrada. Nova inspeção liberada.';if(a)$('talha').value=a.talhaId;else $('osEstado').textContent='Nenhuma O.S. em andamento. A próxima será iniciada ao abrir a tela de O.S.';}
 function fecharOs(){let a=dataStore.ativa;if(!a){iniciarOsSelecionada();a=dataStore.ativa;if(!a)return alert('Selecione uma talha antes de finalizar')}let t=dataStore.talhas.find(x=>x.id===$('talha').value);if(!t)return alert('Selecione uma talha');const cadastroTec=dataStore.executante||{};if(!cadastroTec.tecnicoNome?.trim()||!cadastroTec.tecnicoAssinatura){$('finalizarStatus').textContent='O nome e a assinatura do técnico devem ser cadastrados em Configurações → Cadastro do executante antes de salvar a ordem de serviço.';alert($('finalizarStatus').textContent);return} $('tec').value=cadastroTec.tecnicoNome.trim();let checklist=itens.map((item,i)=>({item,resposta:$('c'+i).value,justificativa:$('c'+i).value==='Não conforme'?$('motivoNc'+i).value.trim():'',foto:$('c'+i).value==='Não conforme'?(fotosNaoConformes[i]||null):null}));if(checklist.some(x=>x.resposta==='Não conforme'&&!x.justificativa))return alert('Explique o motivo de cada item marcado como Não conforme.');if(checklist.some(x=>x.resposta==='Não verificado')){$('finalizarStatus').textContent='Preencha o checklist: escolha Conforme, Não conforme ou Não aplicável para cada item.';return alert($('finalizarStatus').textContent)}if(exigeJustificativaSituacao()&&!$('restricoesTexto').value.trim())return alert('Descreva o motivo da situação final selecionada antes de salvar a ordem de serviço.');let com=$('modoAss').value==='com';if(com&&!$('respCli').value.trim()){$('finalizarStatus').textContent='Informe o nome do responsável pelo cliente ou selecione a opção sem assinatura do cliente.';return alert($('finalizarStatus').textContent)}if(com&&!assinou('sigCli')){$('finalizarStatus').textContent='Solicite a assinatura do responsável pelo cliente ou selecione a opção sem assinatura.';return alert($('finalizarStatus').textContent)}
@@ -246,7 +246,20 @@ function salvarEmpresa(prefix,key){
  alert(prefix==='cli'?'Dados do cliente salvos com sucesso!':'Dados da empresa executante salvos com sucesso!');
  return true
 }
-function salvarCliente(){salvarEmpresa('cli','cliente')}
+function salvarCliente(){
+ if(dataStore.ativa)return alert('Salve a ordem de serviço em andamento antes de alterar o cliente.');
+ const novo=lerEmpresa('cli','cliente');if(!novo.nome.trim())return alert('Informe o nome do cliente.');
+ const anterior=dataStore.cliente;
+ const existente=dataStore.clientes.find(c=>c.id===anterior.id);
+ const id=existente?.id||'cli_'+Date.now();
+ const cliente={...novo,id};
+ const indice=dataStore.clientes.findIndex(c=>c.id===id);
+ if(indice>=0)dataStore.clientes[indice]=cliente;else dataStore.clientes.push(cliente);
+ dataStore.cliente={...cliente};persist();render();listarClientes();
+ $('cliSaveStatus').textContent='Cliente salvo na lista.';
+ alert('Cliente salvo com sucesso.');
+ return true;
+}
 function salvarExecutante(){
  const nome=$('exeTecnico').value.trim(),anterior={...dataStore.executante};
  const assinatura=assinou('sigCadastroTec')?$('sigCadastroTec').toDataURL('image/png'):(anterior.tecnicoNome===nome?anterior.tecnicoAssinatura:null);
@@ -306,5 +319,5 @@ render=function(){
 function exportarBackup(){try{let json=JSON.stringify({tipo:'GIGA_TALHAS_BACKUP',versao:1,criado:new Date().toISOString(),dados:dataStore});if(window.GigaAndroid&&GigaAndroid.exportBackup)GigaAndroid.exportBackup(json);else{let blob=new Blob([json],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='GIGA-TALHAS-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}catch(e){alert('Falha ao criar backup')}}
 function importarBackup(){if(!confirm('Restaurar um backup substituirá os dados atuais. Deseja continuar?'))return;if(window.GigaAndroid&&GigaAndroid.importBackup)GigaAndroid.importBackup();else{let inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{let r=new FileReader();r.onload=()=>restaurarBackupRecebido(r.result);r.readAsText(inp.files[0])};inp.click()}}
 function restaurarBackupRecebido(raw){try{let b=JSON.parse(raw);if(b.tipo!=='GIGA_TALHAS_BACKUP'||!b.dados||!Array.isArray(b.dados.talhas)||!Array.isArray(b.dados.ordens))throw Error('inválido');let d=b.dados;d.cliente=d.cliente||{nome:''};d.executante=d.executante||{nome:'GIGA ELEVADORES'};d.proximoNumero=d.proximoNumero||Math.max(0,...d.ordens.map(o=>Number(o.numero)||0))+1;localStorage.setItem(KEY,JSON.stringify(d));alert('Backup restaurado. O aplicativo será recarregado.');location.reload()}catch(e){alert('Arquivo inválido ou sem espaço para restaurar. Nenhum dado foi substituído.')}}
-carregarEmpresas();toggleAss();atualizarAssinaturaAutomatica();page("home");
+carregarEmpresas();toggleAss();atualizarAssinaturaAutomatica();page("home");listarClientes();
 </script></body></html>
