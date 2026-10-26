@@ -169,12 +169,13 @@ class MainActivity : Activity() {
    startActivityForResult(intent, IMPORT_REQUEST)
   } }
   @JavascriptInterface fun sharePdf(html: String, fileName: String, destino: String) { runOnUiThread {
+   WebView.enableSlowWholeDocumentDraw()
    val printable = WebView(this@MainActivity)
-   printable.settings.javaScriptEnabled = false
+   printable.settings.javaScriptEnabled = true
    printable.settings.defaultTextEncodingName = "UTF-8"
    val root = window.decorView as android.view.ViewGroup
    root.addView(printable, android.view.ViewGroup.LayoutParams(794, 1123))
-   printable.alpha = 0f
+   printable.translationX = -2000f
    var started = false
    fun cleanup() {
     try { root.removeView(printable); printable.destroy() } catch (_: Exception) {}
@@ -188,7 +189,9 @@ class MainActivity : Activity() {
     override fun onPageFinished(view: WebView?, url: String?) {
      if (started) return
      started = true
-     printable.postDelayed({
+     printable.evaluateJavascript("(function(){return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight,document.body.offsetHeight)})()") { heightText ->
+      val documentHeight = heightText.trim('"').toIntOrNull() ?: 1123
+      printable.postDelayed({
       try {
        val width = 794
        val pageWidth = 595
@@ -197,7 +200,7 @@ class MainActivity : Activity() {
         android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
         android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
        )
-       val contentHeight = maxOf(printable.measuredHeight, (printable.contentHeight * printable.scale).toInt(), 1123)
+       val contentHeight = maxOf(documentHeight, printable.measuredHeight, (printable.contentHeight * printable.scale).toInt(), 1123)
        printable.layout(0, 0, width, contentHeight)
        val pdf = android.graphics.pdf.PdfDocument()
        val scale = pageWidth.toFloat() / width
@@ -235,7 +238,8 @@ class MainActivity : Activity() {
        }
        cleanup()
       } catch (e: Exception) { fail("Falha ao gerar ou compartilhar PDF: " + (e.message ?: "erro desconhecido")) }
-     }, 800)
+     }, 250)
+     }
     }
    }
    printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
