@@ -15,6 +15,11 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import java.io.File
 import android.webkit.WebResourceRequest
+import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.content.Context
@@ -163,6 +168,68 @@ class MainActivity : Activity() {
    }
    startActivityForResult(intent, IMPORT_REQUEST)
   } }
+  @JavascriptInterface fun sharePdf(html: String, fileName: String) { runOnUiThread {
+   val printable = WebView(this@MainActivity)
+   printable.settings.javaScriptEnabled = false
+   printable.webViewClient = object : WebViewClient() {
+    override fun onPageFinished(view: WebView?, url: String?) {
+     printable.postDelayed({
+      val adapter = printable.createPrintDocumentAdapter("GIGA TALHAS - OS")
+      val attributes = PrintAttributes.Builder()
+       .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+       .setResolution(PrintAttributes.Resolution("pdf", "PDF", 300, 300))
+       .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+       .build()
+      adapter.onStart()
+      adapter.onLayout(null, attributes, null, object : PrintDocumentAdapter.LayoutResultCallback() {
+       override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
+        try {
+         val dir = File(cacheDir, "shared_os").apply { mkdirs() }
+         val safeName = fileName.replace(Regex("[^a-zA-Z0-9_.-]"), "_").take(100)
+         val output = File(dir, if (safeName.endsWith(".pdf")) safeName else "$safeName.pdf")
+         val fd = ParcelFileDescriptor.open(output, ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_READ_WRITE)
+         adapter.onWrite(arrayOf(PageRange.ALL_PAGES), fd, null, object : PrintDocumentAdapter.WriteResultCallback() {
+          override fun onWriteFinished(pages: Array<out PageRange>?) {
+           try {
+            fd.close()
+            adapter.onFinish()
+            val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
+            val send = Intent(Intent.ACTION_SEND).apply {
+             type = "application/pdf"
+             putExtra(Intent.EXTRA_STREAM, uri)
+             putExtra(Intent.EXTRA_SUBJECT, "GIGA TALHAS - Ordem de Serviço")
+             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+             clipData = android.content.ClipData.newUri(contentResolver, "Ordem de Serviço PDF", uri)
+            }
+            startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
+           } catch (e: Exception) { Toast.makeText(this@MainActivity, "Não foi possível compartilhar o PDF.", Toast.LENGTH_LONG).show() }
+           printable.destroy()
+          }
+          override fun onWriteFailed(error: CharSequence?) {
+           try { fd.close() } catch (_: Exception) {}
+           adapter.onFinish()
+           printable.destroy()
+           Toast.makeText(this@MainActivity, "Falha ao gerar PDF da O.S.", Toast.LENGTH_LONG).show()
+          }
+         })
+        } catch (e: Exception) {
+         adapter.onFinish()
+         printable.destroy()
+         Toast.makeText(this@MainActivity, "Falha ao preparar PDF.", Toast.LENGTH_LONG).show()
+        }
+       }
+       override fun onLayoutFailed(error: CharSequence?) {
+        adapter.onFinish()
+        printable.destroy()
+        Toast.makeText(this@MainActivity, "Falha na formatação do PDF.", Toast.LENGTH_LONG).show()
+       }
+      }, null)
+     }, 650)
+    }
+   }
+   printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+  } }
+
   @JavascriptInterface fun printHtml(html: String) { runOnUiThread {
    val printable = WebView(this@MainActivity)
    printable.settings.javaScriptEnabled = false
