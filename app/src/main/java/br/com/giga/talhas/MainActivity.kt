@@ -243,7 +243,6 @@ class MainActivity : Activity() {
        cleanup()
       } catch (e: Exception) { fail("Falha ao gerar ou compartilhar PDF: " + (e.message ?: "erro desconhecido")) }
      }, 250)
-     }
     }
    }
    printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
