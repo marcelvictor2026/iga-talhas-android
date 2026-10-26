@@ -173,6 +173,9 @@ class MainActivity : Activity() {
    val printable = WebView(this@MainActivity)
    printable.settings.javaScriptEnabled = true
    printable.settings.defaultTextEncodingName = "UTF-8"
+   printable.settings.useWideViewPort = true
+   printable.settings.loadWithOverviewMode = false
+   printable.setInitialScale(100)
    val root = window.decorView as android.view.ViewGroup
    root.addView(printable, android.view.ViewGroup.LayoutParams(794, 1123))
    printable.translationX = -2000f
@@ -200,7 +203,7 @@ class MainActivity : Activity() {
         android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
         android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
        )
-       val contentHeight = maxOf(documentHeight, printable.measuredHeight, (printable.contentHeight * printable.scale).toInt(), 1123)
+       val contentHeight = maxOf(documentHeight, 1123)
        printable.layout(0, 0, width, contentHeight)
        val pdf = android.graphics.pdf.PdfDocument()
        val scale = pageWidth.toFloat() / width
