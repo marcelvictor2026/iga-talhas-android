@@ -194,32 +194,33 @@ class MainActivity : Activity() {
      if (started) return
      started = true
      printable.postDelayed({
-      try {
-       // Uma pagina A4 corresponde a 794 x 1123 pixels CSS em 96 dpi.
-       // Renderizar com largura fixa, independente da densidade fisica do celular.
-       val cssWidth = 794
-       val pageWidth = 595
-       val pageHeight = 842
-       val scale = pageWidth.toFloat() / cssWidth
-       val sourcePageHeight = (pageHeight / scale).toInt()
-       printable.measure(
-        android.view.View.MeasureSpec.makeMeasureSpec(cssWidth, android.view.View.MeasureSpec.EXACTLY),
-        android.view.View.MeasureSpec.makeMeasureSpec(sourcePageHeight, android.view.View.MeasureSpec.EXACTLY)
-       )
-       printable.layout(0, 0, cssWidth, sourcePageHeight)
-       val cssHeight = printable.contentHeight.coerceAtLeast(sourcePageHeight)
-       val pages = ((cssHeight + sourcePageHeight - 1) / sourcePageHeight).coerceIn(1, 100)
-       val pdf = android.graphics.pdf.PdfDocument()
-       for (i in 0 until pages) {
-        printable.scrollTo(0, i * sourcePageHeight)
-        val page = pdf.startPage(android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i + 1).create())
-        page.canvas.drawColor(android.graphics.Color.WHITE)
-        page.canvas.save()
-        page.canvas.scale(scale, scale)
-        printable.draw(page.canvas)
-        page.canvas.restore()
-        pdf.finishPage(page)
-       }
+      printable.evaluateJavascript("(function(){return Math.ceil(Math.max(document.body.scrollHeight,document.documentElement.scrollHeight,document.body.offsetHeight))})()") { heightResult ->
+       try {
+        val cssWidth = 794
+        val pageWidth = 595
+        val pageHeight = 842
+        val scale = pageWidth.toFloat() / cssWidth
+        val sourcePageHeight = (pageHeight / scale).toInt()
+        val cssHeight = (heightResult.trim('"').toIntOrNull() ?: sourcePageHeight).coerceAtLeast(sourcePageHeight)
+        // Desenhar o documento inteiro, deslocando o canvas em cada pagina.
+        // WebView.scrollTo nao renderiza paginas posteriores em PDF.
+        printable.measure(
+         android.view.View.MeasureSpec.makeMeasureSpec(cssWidth, android.view.View.MeasureSpec.EXACTLY),
+         android.view.View.MeasureSpec.makeMeasureSpec(cssHeight, android.view.View.MeasureSpec.EXACTLY)
+        )
+        printable.layout(0, 0, cssWidth, cssHeight)
+        val pages = ((cssHeight + sourcePageHeight - 1) / sourcePageHeight).coerceIn(1, 100)
+        val pdf = android.graphics.pdf.PdfDocument()
+        for (i in 0 until pages) {
+         val page = pdf.startPage(android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i + 1).create())
+         page.canvas.drawColor(android.graphics.Color.WHITE)
+         page.canvas.save()
+         page.canvas.scale(scale, scale)
+         page.canvas.translate(0f, -(i * sourcePageHeight).toFloat())
+         printable.draw(page.canvas)
+         page.canvas.restore()
+         pdf.finishPage(page)
+        }
        val folder = File(cacheDir, "shared_os").apply { mkdirs() }
        val safeName = fileName.replace(Regex("[^a-zA-Z0-9_.-]"), "_").take(100)
        val output = File(folder, if (safeName.endsWith(".pdf")) safeName else "$safeName.pdf")
@@ -241,8 +242,9 @@ class MainActivity : Activity() {
         startActivity(Intent.createChooser(send, "Escolher aplicativo para compartilhar PDF"))
        }
        cleanup()
-      } catch (e: Exception) { fail("Falha ao gerar ou compartilhar PDF: " + (e.message ?: "erro desconhecido")) }
-     }, 250)
+       } catch (e: Exception) { fail("Falha ao gerar ou compartilhar PDF: " + (e.message ?: "erro desconhecido")) }
+      }
+     }, 500)
     }
    }
    printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
