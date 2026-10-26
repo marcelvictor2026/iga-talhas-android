@@ -17,6 +17,7 @@ button{background:linear-gradient(100deg,#ffb220,#ff8900);color:#13171c;border:0
 button:active{filter:brightness(.9);transform:scale(.99)}.secondary{background:#223441;color:#e8f0f6;box-shadow:none}
 nav.topnav{display:none}
 .bottomnav{position:fixed;bottom:0;left:0;right:0;z-index:10;display:flex;justify-content:space-around;gap:2px;background:#0d1924f7;border-top:1px solid #2c3a47;backdrop-filter:blur(18px);padding:7px 5px max(8px,env(safe-area-inset-bottom))}
+.bottomnav.teclado-aberto{display:none!important}body:has(.bottomnav.teclado-aberto) .credito-desenvolvedor{display:none!important}
 .bottomnav button{background:transparent;box-shadow:none;color:#9ba9b7;font-size:11px;padding:5px 2px;min-height:49px;margin:0;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:3px}
 .bottomnav button .ico{font-size:22px}.bottomnav button.active{color:var(--orange);background:#ff9d000e}
 .home-hello{font-size:25px;font-weight:850;margin:16px 2px 3px}.home-sub{color:#a4b5c4;margin:0 2px 23px}
@@ -82,7 +83,9 @@ dataStore.cliente=dataStore.cliente||{nome:''};dataStore.clientes=Array.isArray(
 if(dataStore.clientes.length===1&&dataStore.cliente.id){dataStore.talhas.forEach(t=>{if(!t.clienteId)t.clienteId=dataStore.cliente.id})}
 const itens=['Carcaça e fixações','Gancho e trava de segurança','Corrente ou cabo de aço','Redutor e lubrificação','Freio','Cabos e conexões elétricas','Botoeira e comandos','Fim de curso (quando aplicável)','Parada de emergência (quando aplicável)','Subida','Descida','Avanço','Retorno'];
 const $=id=>document.getElementById(id); const persist=()=>localStorage.setItem(KEY,JSON.stringify(dataStore)); const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function page(id){['home','equip','os','hist','cad','config'].forEach(k=>$(k).classList.toggle('hide',k!==id));document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));render();window.scrollTo(0,0)}
+document.addEventListener('focusin',e=>{if(e.target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select'))document.querySelector('.bottomnav')?.classList.add('teclado-aberto')});
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement?.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select'))document.querySelector('.bottomnav')?.classList.remove('teclado-aberto')},150)});
+function page(id){document.activeElement?.blur?.();document.querySelector('.bottomnav')?.classList.remove('teclado-aberto');['home','equip','os','hist','cad','config'].forEach(k=>$(k).classList.toggle('hide',k!==id));document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));render();window.scrollTo(0,0)}
 let criandoCliente=false;
 function novoCliente(){if(dataStore.ativa)return alert('Salve a ordem de serviço antes de cadastrar outro cliente.');criandoCliente=true;['cliNome','cliDoc','cliEnd','cliTel','cliEmail'].forEach(id=>$(id).value='');$('cliSaveStatus').textContent='Preencha o nome do novo cliente e salve.';$('cliNome').focus()}
 function listarClientes(){
