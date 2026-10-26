@@ -11,6 +11,8 @@ import android.print.PrintAttributes
 import android.print.PrintManager
 import android.content.Context
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : Activity() {
  private lateinit var web: WebView
@@ -45,6 +47,31 @@ class MainActivity : Activity() {
   }
  }
  inner class Bridge {
+  @JavascriptInterface fun consultarCnpj(cnpj: String, campo: String) {
+   if (!cnpj.matches(Regex("[0-9]{14}")) || campo !in listOf("cli","exe")) return
+   Thread {
+    var response = ""
+    try {
+     val connection = URL("https://brasilapi.com.br/api/cnpj/v1/$cnpj").openConnection() as HttpURLConnection
+     connection.connectTimeout = 12000
+     connection.readTimeout = 12000
+     connection.setRequestProperty("Accept", "application/json")
+     connection.setRequestProperty("User-Agent", "GigaTalhas/0.6")
+     try {
+      if (connection.responseCode == 200) {
+       response = connection.inputStream.bufferedReader().use { it.readText() }
+      } else {
+       response = JSONObject().put("erro", "Consulta indisponível ou CNPJ não localizado (HTTP ${connection.responseCode})").toString()
+      }
+     } finally { connection.disconnect() }
+    } catch (e: Exception) {
+     response = JSONObject().put("erro", "Não foi possível consultar. Verifique a internet e tente novamente.").toString()
+    }
+    val callback = "receberCnpj(${JSONObject.quote(campo)},${JSONObject.quote(cnpj)},${JSONObject.quote(response)})"
+    runOnUiThread { web.evaluateJavascript(callback, null) }
+   }.start()
+  }
+
   @JavascriptInterface fun exportBackup(json: String) { runOnUiThread {
    backupPending = json
    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
