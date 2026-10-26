@@ -168,7 +168,7 @@ class MainActivity : Activity() {
    }
    startActivityForResult(intent, IMPORT_REQUEST)
   } }
-  @JavascriptInterface fun sharePdf(html: String, fileName: String) { runOnUiThread {
+  @JavascriptInterface fun sharePdf(html: String, fileName: String, destino: String) { runOnUiThread {
    val printable = WebView(this@MainActivity)
    printable.settings.javaScriptEnabled = false
    printable.settings.defaultTextEncodingName = "UTF-8"
@@ -212,7 +212,15 @@ class MainActivity : Activity() {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         clipData = android.content.ClipData.newUri(contentResolver, "Ordem de Serviço PDF", uri)
        }
-       startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
+       if (destino == "whatsapp" || destino == "business") {
+        send.setPackage(if (destino == "business") "com.whatsapp.w4b" else "com.whatsapp")
+        try { startActivity(send) }
+        catch (e: android.content.ActivityNotFoundException) {
+         Toast.makeText(this@MainActivity, "WhatsApp selecionado não está instalado neste celular.", Toast.LENGTH_LONG).show()
+        }
+       } else {
+        startActivity(Intent.createChooser(send, "Escolher aplicativo para enviar PDF"))
+       }
       } catch (e: Exception) {
        Toast.makeText(this@MainActivity, "Falha ao gerar PDF: " + (e.message ?: "erro desconhecido"), Toast.LENGTH_LONG).show()
       } finally { printable.destroy() }
