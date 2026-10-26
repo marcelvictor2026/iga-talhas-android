@@ -1,8 +1,6 @@
 name: Compilar GIGA TALHAS APK
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
