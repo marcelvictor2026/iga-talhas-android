@@ -6,6 +6,12 @@ import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
+import android.webkit.ValueCallback
+import android.net.Uri
+import android.provider.MediaStore
+import androidx.core.content.FileProvider
+import java.io.File
 import android.webkit.WebResourceRequest
 import android.print.PrintAttributes
 import android.print.PrintManager
@@ -17,6 +23,9 @@ import java.net.URL
 class MainActivity : Activity() {
  private lateinit var web: WebView
  private var backupPending: String? = null
+ private var fileCallback: ValueCallback<Array<Uri>>? = null
+ private var cameraUri: Uri? = null
+ private val PHOTO_REQUEST = 203
  private val EXPORT_REQUEST = 201
  private val IMPORT_REQUEST = 202
  override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,12 +34,57 @@ class MainActivity : Activity() {
   web.settings.javaScriptEnabled = true
   web.settings.domStorageEnabled = true
   web.webViewClient = WebViewClient()
+  web.webChromeClient = object : WebChromeClient() {
+   override fun onShowFileChooser(view: WebView?, callback: ValueCallback<Array<Uri>>?, params: FileChooserParams?): Boolean {
+    fileCallback?.onReceiveValue(null)
+    fileCallback = callback
+    return try {
+     val pick = Intent(Intent.ACTION_GET_CONTENT).apply {
+      type = "image/*"
+      addCategory(Intent.CATEGORY_OPENABLE)
+      putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+     }
+     val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+     val options = mutableListOf<Intent>()
+     if (camera.resolveActivity(packageManager) != null) {
+      val folder = File(cacheDir, "photos").apply { mkdirs() }
+      val file = File.createTempFile("giga_", ".jpg", folder)
+      cameraUri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+      camera.putExtra(MediaStore.EXTRA_OUTPUT, cameraUri)
+      camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+      options.add(camera)
+     }
+     val chooser = Intent.createChooser(pick, "Selecionar ou tirar foto")
+     chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, options.toTypedArray())
+     startActivityForResult(chooser, PHOTO_REQUEST)
+     true
+    } catch (e: Exception) {
+     fileCallback?.onReceiveValue(null)
+     fileCallback = null
+     false
+    }
+   }
+  }
   web.addJavascriptInterface(Bridge(), "GigaAndroid")
   setContentView(web)
   web.loadUrl("file:///android_asset/index.html")
  }
  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
   super.onActivityResult(requestCode, resultCode, data)
+  if (requestCode == PHOTO_REQUEST) {
+   val uris = if (resultCode == RESULT_OK) {
+    val clip = data?.clipData
+    when {
+     clip != null -> Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
+     data?.data != null -> arrayOf(data.data!!)
+     else -> cameraUri?.let { arrayOf(it) } ?: emptyArray()
+    }
+   } else emptyArray()
+   fileCallback?.onReceiveValue(if (uris.isEmpty()) null else uris)
+   fileCallback = null
+   cameraUri = null
+   return
+  }
   if (resultCode != RESULT_OK || data?.data == null) return
   try {
    if (requestCode == EXPORT_REQUEST) {
