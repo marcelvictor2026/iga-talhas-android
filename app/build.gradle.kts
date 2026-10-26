@@ -6,8 +6,8 @@ android {
         applicationId = "br.com.giga.talhas"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.7"
+        versionCode = 6
+        versionName = "0.8"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
