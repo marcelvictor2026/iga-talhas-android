@@ -82,8 +82,40 @@ dataStore.cliente=dataStore.cliente||{nome:''};dataStore.clientes=Array.isArray(
 const itens=['Carcaça e fixações','Gancho e trava de segurança','Corrente ou cabo de aço','Redutor e lubrificação','Freio','Cabos e conexões elétricas','Botoeira e comandos','Fim de curso (quando aplicável)','Parada de emergência (quando aplicável)','Subida','Descida','Avanço','Retorno'];
 const $=id=>document.getElementById(id); const persist=()=>localStorage.setItem(KEY,JSON.stringify(dataStore)); const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function page(id){['home','equip','os','hist','cad','config'].forEach(k=>$(k).classList.toggle('hide',k!==id));document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));render();window.scrollTo(0,0)}
-function addTalha(){let pat=$('pat').value.trim();if(!pat)return alert('Informe a identificação da talha');if(dataStore.talhas.some(t=>t.pat===pat))return alert('Identificação já cadastrada');let t={id:Date.now().toString(),pat,fab:$('fab').value,mod:$('mod').value,cap:$('cap').value,local:$('local').value};dataStore.talhas.push(t);persist();['pat','fab','mod','cap','local'].forEach(k=>$(k).value='');render()}
-function render(){ $('lista').innerHTML=dataStore.talhas.map(t=>`<div class="item"><b>${esc(t.pat)}</b> — ${esc(t.fab)} ${esc(t.mod)}<br><small>${esc(t.local)} • ${esc(t.cap)}</small></div>`).join('')||'Nenhuma talha cadastrada';$('talha').innerHTML=dataStore.talhas.map(t=>`<option value="${esc(t.id)}">${esc(t.pat)} — ${esc(t.local)}</option>`).join('');$('historico').innerHTML=dataStore.ordens.map(o=>`<div class="item"><b>OS ${esc(o.numero)}</b> — ${esc(o.patrimonio)}<br><small>${esc(o.data)} • ${esc(o.tecnico)} • ${esc(o.situacao)}</small></div>`).join('')||'Nenhuma inspeção salva'}
+function listarClientes(){
+ const busca=($('pesquisaCliente').value||'').trim().toLocaleLowerCase('pt-BR');
+ const clientes=dataStore.clientes.filter(c=>c.nome&&c.nome.toLocaleLowerCase('pt-BR').includes(busca));
+ $('listaClientes').innerHTML=clientes.map(c=>'<button class="secondary" onclick="selecionarCliente('+JSON.stringify(c.id).replace(/"/g,'&quot;')+')">'+esc(c.nome)+(dataStore.cliente.id===c.id?' ✓':'')+'</button>').join('')||'<p class="muted">Nenhum cliente encontrado. Cadastre um cliente abaixo.</p>';
+ $('clienteSelecionado').textContent=dataStore.cliente.nome?'Cliente selecionado: '+dataStore.cliente.nome:'Selecione ou cadastre um cliente para vincular uma talha.';
+}
+function selecionarCliente(id){
+ if(dataStore.ativa)return alert('Salve a ordem de serviço em andamento antes de trocar de cliente.');
+ const cliente=dataStore.clientes.find(c=>c.id===id);if(!cliente)return;
+ dataStore.cliente={...cliente};persist();carregarEmpresas();render();listarClientes();validarCamposOs();
+}
+function abrirCadastroTalha(){
+ if(!dataStore.cliente.id||!dataStore.cliente.nome)return alert('Selecione um cliente da lista antes de cadastrar uma talha.');
+ page('equip');
+}
+function talhasDoCliente(){return dataStore.talhas.filter(t=>t.clienteId===dataStore.cliente.id)}
+function addTalha(){
+ if(!dataStore.cliente.id)return alert('Selecione um cliente antes de cadastrar a talha.');
+ const pat=$('pat').value.trim();if(!pat)return alert('Informe a identificação da talha.');
+ if(dataStore.talhas.some(t=>t.pat===pat&&t.clienteId===dataStore.cliente.id))return alert('Esta identificação já está cadastrada para o cliente.');
+ const t={id:Date.now().toString(),clienteId:dataStore.cliente.id,pat,fab:$('fab').value,mod:$('mod').value,cap:$('cap').value,local:$('local').value};
+ dataStore.talhas.push(t);persist();['pat','fab','mod','cap','local'].forEach(k=>$(k).value='');render();alert('Talha vinculada ao cliente '+dataStore.cliente.nome+'.');
+}
+function render(){
+ const talhas=talhasDoCliente();
+ $('clienteTalhaSelecionado').textContent='Cliente: '+(dataStore.cliente.nome||'Não selecionado');
+ $('lista').innerHTML=talhas.map(t=>'<div class="item"><b>'+esc(t.pat)+'</b> — '+esc(t.fab)+' '+esc(t.mod)+'<br><small>'+esc(t.local)+' • '+esc(t.cap)+'</small></div>').join('')||'Nenhuma talha cadastrada para este cliente.';
+ const selecionado=dataStore.ativa?.talhaId||$('talha').value;
+ $('talha').innerHTML=talhas.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.pat)+' — '+esc(t.local)+'</option>').join('');
+ if(talhas.some(t=>t.id===selecionado))$('talha').value=selecionado;
+ $('nomeCli').textContent=dataStore.cliente.nome||'Não cadastrado';
+ $('historico').innerHTML=dataStore.ordens.map(o=>'<div class="item"><b>OS '+esc(o.numero)+'</b> — '+esc(o.patrimonio)+'<br><small>'+esc(o.data)+' • '+esc(o.tecnico)+' • '+esc(o.situacao)+'</small></div>').join('')||'Nenhuma inspeção salva';
+}
+
 $('checks').innerHTML='<h3>Checklist técnico</h3><p class="muted">Funcionamento: subida, descida, avanço e retorno. Marque Não aplicável quando o equipamento não possuir o movimento.</p>'+itens.map((x,i)=>`<label>${esc(x)}<select id="c${i}"><option>Não verificado</option><option>Conforme</option><option>Não conforme</option><option>Não aplicável</option></select><div id="naoConforme${i}" class="nc-detalhe hide"><label>Por que não está conforme?<textarea id="motivoNc${i}" rows="2" placeholder="Descreva a não conformidade"></textarea></label><label>Foto da não conformidade (opcional)<input type="file" accept="image/*" onchange="fotoNaoConforme(${i},this)"></label><div id="fotoNcPreview${i}"></div></div></label>`).join('');
 for(const id of ['sigTec','sigCli','sigCadastroTec']){const c=$(id),ctx=c.getContext('2d');ctx.strokeStyle='#111';ctx.lineWidth=3;let down=false;c.addEventListener('pointerdown',e=>{down=true;c.setPointerCapture(e.pointerId);let r=c.getBoundingClientRect();ctx.beginPath();ctx.moveTo((e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height)});c.addEventListener('pointermove',e=>{if(!down)return;let r=c.getBoundingClientRect();ctx.lineTo((e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height);ctx.stroke()});c.addEventListener('pointerup',()=>{down=false;validarCamposOs()})}
 function clearSig(id){let c=$(id);c.getContext('2d').clearRect(0,0,c.width,c.height);validarCamposOs()}
