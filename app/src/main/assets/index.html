@@ -133,14 +133,35 @@ window.alert=avisoVerde;
 function exigeJustificativaSituacao(){return ['Operacional com restrições','Interditada / não liberar para uso','Pendente de avaliação'].includes($('situ').value)}
 function validarCamposOs(){
  document.querySelectorAll('#servOpcoes input[type=checkbox]').forEach(el=>el.closest('label').classList.toggle('servico-ok',el.checked));
- const tec=$('tec'),resp=$('respCli'),com=$('modoAss').value==='com';$('areaNomeResp').classList.toggle('hide',!com);
+ const tec=$('tec'),resp=$('respCli'),com=$('modoAss').value==='com',cadastro=dataStore.executante||{};
+ $('areaNomeResp').classList.toggle('hide',!com);
+ if(cadastro.tecnicoNome&&tec.value!==cadastro.tecnicoNome.trim())tec.value=cadastro.tecnicoNome.trim();
  const atualizar=(el,ok)=>{if(!el)return;el.classList.toggle('campo-ok',ok);el.classList.toggle('campo-pendente',!ok)};
  atualizar(tec,!!tec.value.trim());atualizar(resp,!com||!!resp.value.trim());
- let completo=!!tec.value.trim()&&(!com||!!resp.value.trim());
- for(let i=0;i<itens.length;i++){let el=$('c'+i);if(!el)continue;let ok=el.value!=='Não verificado';el.classList.remove('campo-ok','campo-pendente','check-amarelo','check-vermelho','check-verde','check-neutro');if(el.value==='Não verificado')el.classList.add('check-amarelo');else if(el.value==='Não conforme')el.classList.add('check-vermelho');else if(el.value==='Conforme')el.classList.add('check-verde');const detalhe=$('naoConforme'+i);if(detalhe){detalhe.classList.toggle('hide',el.value!=='Não conforme');if(el.value==='Não conforme'&&!$('motivoNc'+i).value.trim())completo=false}completo=completo&&ok}
- const restrita=exigeJustificativaSituacao();$('restricoesDetalhe').classList.toggle('hide',!restrita);$('restricoesTexto').classList.toggle('campo-pendente',restrita&&!$('restricoesTexto').value.trim());$('restricoesTexto').classList.toggle('campo-ok',restrita&&!!$('restricoesTexto').value.trim());if(restrita&&!$('restricoesTexto').value.trim())completo=false;
- const cadastro=dataStore.executante||{};completo=completo&&!!cadastro.tecnicoNome?.trim()&&!!cadastro.tecnicoAssinatura&&(!com||assinou('sigCli'))&&(!dataStore.ativa||dataStore.talhas.some(t=>t.id===dataStore.ativa.talhaId));const botao=$('btnSalvarOs');if(botao){botao.disabled=!completo;const icone=$('iconeSalvarOs');if(icone)icone.textContent=completo?'🔓':'🔒';}
- const status=$('finalizarStatus');if(status){status.textContent=completo?'✓ Todos os campos obrigatórios foram preenchidos. Pronto para salvar a ordem de serviço.':'Preencha os campos obrigatórios destacados para salvar a ordem de serviço.';status.classList.toggle('status-ok',completo)}
+ const faltas=[];
+ if(!cadastro.tecnicoNome?.trim())faltas.push('Cadastrar o nome do técnico em Configurações.');
+ if(!cadastro.tecnicoAssinatura)faltas.push('Cadastrar a assinatura do técnico em Configurações.');
+ if(com&&!resp.value.trim())faltas.push('Informar o nome do responsável pelo cliente.');
+ if(com&&!assinou('sigCli'))faltas.push('Coletar a assinatura do responsável pelo cliente.');
+ if(!dataStore.ativa||!dataStore.talhas.some(t=>t.id===dataStore.ativa.talhaId))faltas.push('Selecionar um equipamento e iniciar a ordem de serviço.');
+ for(let i=0;i<itens.length;i++){
+  const el=$('c'+i);if(!el)continue;
+  el.classList.remove('campo-ok','campo-pendente','check-amarelo','check-vermelho','check-verde','check-neutro');
+  if(el.value==='Não verificado'){el.classList.add('check-amarelo');faltas.push('Verificar o item do checklist: '+itens[i]+'.')}
+  else if(el.value==='Não conforme')el.classList.add('check-vermelho');
+  else if(el.value==='Conforme')el.classList.add('check-verde');
+  const detalhe=$('naoConforme'+i);
+  if(detalhe){detalhe.classList.toggle('hide',el.value!=='Não conforme');if(el.value==='Não conforme'&&!$('motivoNc'+i).value.trim())faltas.push('Justificar a não conformidade: '+itens[i]+'.')}
+ }
+ const restrita=exigeJustificativaSituacao();
+ $('restricoesDetalhe').classList.toggle('hide',!restrita);
+ $('restricoesTexto').classList.toggle('campo-pendente',restrita&&!$('restricoesTexto').value.trim());
+ $('restricoesTexto').classList.toggle('campo-ok',restrita&&!!$('restricoesTexto').value.trim());
+ if(restrita&&!$('restricoesTexto').value.trim())faltas.push('Informar a justificativa da situação final.');
+ const completo=faltas.length===0,botao=$('btnSalvarOs');
+ if(botao){botao.disabled=!completo;const icone=$('iconeSalvarOs');if(icone)icone.textContent=completo?'🔓':'🔒';}
+ const status=$('finalizarStatus');
+ if(status){status.textContent=completo?'✓ Todos os campos obrigatórios foram preenchidos. A ordem de serviço pode ser salva.':'🔒 Para liberar o salvamento, preencha:\n'+faltas.map((item,i)=>(i+1)+'. '+item).join('\n');status.style.whiteSpace='pre-line';status.classList.toggle('status-ok',completo)}
 }
 document.addEventListener('input',e=>{if(e.target.closest('#os'))validarCamposOs()});
 document.addEventListener('change',e=>{if(e.target.closest('#os'))validarCamposOs()});
