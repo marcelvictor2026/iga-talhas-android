@@ -4,7 +4,7 @@
 :root{color-scheme:dark;--bg:#070d13;--panel:#101c27;--line:#243440;--orange:#ff9d00;--text:#f3f6fa;--muted:#9daeba}
 body{background:radial-gradient(ellipse at 85% -15%,#203449 0,transparent 48%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:82px}
 header{position:sticky;top:0;z-index:5;background:#09121deF;backdrop-filter:blur(16px);border-bottom:1px solid #253341;padding:16px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px #0005}
-header .brand-icon{background:linear-gradient(135deg,#ffbd32,#f37b00);color:#111;width:43px;height:43px;border-radius:13px;display:grid;place-items:center;font-size:27px;font-weight:900;box-shadow:0 0 20px #ff9d0035}
+header .brand-icon{background:#fff;color:#111;width:48px;height:48px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;padding:4px;box-shadow:0 0 20px #ffffff18}header .brand-icon svg{width:100%;height:100%}
 header h1{color:white;font-size:21px;letter-spacing:.5px;font-weight:900;line-height:1}header h1 span{color:var(--orange)}
 header small{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#b6c1cb}
 main{max-width:760px;padding:15px 16px 24px}
@@ -29,7 +29,7 @@ nav.topnav{display:none}
 .muted{color:#a6b6c5}canvas{border:2px solid #394856}
 #historico .item button{margin:9px 0 0;font-size:12px}
 @media print{body{background:white;color:black;padding-bottom:0}.bottomnav{display:none!important}header{position:static;box-shadow:none}button{box-shadow:none}}
-</style></head><body><header><div class="brand-icon">⚙</div><div><h1>GIGA <span>TALHAS</span></h1><small>Manutenção e ordens de serviço</small></div></header><main><nav class="no-print topnav"><button onclick="page('equip')">Talhas</button><button onclick="abrirOuContinuar()">Nova O.S. / Continuar</button><button onclick="page('hist')">Histórico</button><button onclick="page('cad')">Empresas</button></nav>
+</style></head><body><header><div class="brand-icon"><svg viewBox="0 0 118 119" aria-label="Logomarca GIGA TALHAS" xmlns="http://www.w3.org/2000/svg"><path fill="#E91B23" d="M42 5H6l18 37Z"/><path fill="#009B50" d="M31 75 13 112h37Z"/><path fill="#0697BC" d="M111 4H52L28 50l31 61 11-21-8-21-3 6-13-23 16-33h23l-1 8h17Z"/><path fill="#0697BC" d="m96 34-34 1-7 15h15l-3 9 8 19 14-27 2-4Z"/></svg></div><div><h1>GIGA <span>TALHAS</span></h1><small>Manutenção e ordens de serviço</small></div></header><main><nav class="no-print topnav"><button onclick="page('equip')">Talhas</button><button onclick="abrirOuContinuar()">Nova O.S. / Continuar</button><button onclick="page('hist')">Histórico</button><button onclick="page('cad')">Empresas</button></nav>
 <section id="home">
  <h2 class="home-hello">Olá, Técnico! 👋</h2><p class="home-sub">O que deseja fazer hoje?</p>
  <div class="home-grid">
