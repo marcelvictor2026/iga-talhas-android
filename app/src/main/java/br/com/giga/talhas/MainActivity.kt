@@ -171,14 +171,15 @@ class MainActivity : Activity() {
   @JavascriptInterface fun sharePdf(html: String, fileName: String, destino: String) { runOnUiThread {
    WebView.enableSlowWholeDocumentDraw()
    val printable = WebView(this@MainActivity)
-   printable.settings.javaScriptEnabled = true
+   printable.settings.javaScriptEnabled = false
    printable.settings.defaultTextEncodingName = "UTF-8"
-   printable.settings.useWideViewPort = true
+   printable.settings.useWideViewPort = false
    printable.settings.loadWithOverviewMode = false
    printable.setInitialScale(100)
+   printable.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
    val root = window.decorView as android.view.ViewGroup
-   root.addView(printable, android.view.ViewGroup.LayoutParams(794, 1123))
-   printable.translationX = -2000f
+   // Renderizar fora da area visivel, mas manter a view anexada para carregar imagens.
+   root.addView(printable, 0, android.view.ViewGroup.LayoutParams(794, 1123))
    var started = false
    fun cleanup() {
     try { root.removeView(printable); printable.destroy() } catch (_: Exception) {}
@@ -192,33 +193,29 @@ class MainActivity : Activity() {
     override fun onPageFinished(view: WebView?, url: String?) {
      if (started) return
      started = true
-     printable.evaluateJavascript("(function(){return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight,document.body.offsetHeight)})()") { heightText ->
-      val documentHeight = heightText.trim('"').toIntOrNull() ?: 1123
-      printable.postDelayed({
+     printable.postDelayed({
       try {
-       // CSS usa pixels logicos (dp); PdfDocument desenha em pixels fisicos.
-       // Aplicar a densidade evita ampliacao e corte do documento em aparelhos Android.
-       val density = resources.displayMetrics.density
+       // Uma pagina A4 corresponde a 794 x 1123 pixels CSS em 96 dpi.
+       // Renderizar com largura fixa, independente da densidade fisica do celular.
        val cssWidth = 794
-       val width = (cssWidth * density).toInt()
        val pageWidth = 595
        val pageHeight = 842
-       val contentHeight = (documentHeight * density).toInt().coerceAtLeast((1123 * density).toInt())
-       printable.measure(
-        android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
-        android.view.View.MeasureSpec.makeMeasureSpec(contentHeight, android.view.View.MeasureSpec.EXACTLY)
-       )
-       printable.layout(0, 0, width, contentHeight)
-       val pdf = android.graphics.pdf.PdfDocument()
-       val scale = pageWidth.toFloat() / width
+       val scale = pageWidth.toFloat() / cssWidth
        val sourcePageHeight = (pageHeight / scale).toInt()
-       val pages = ((contentHeight + sourcePageHeight - 1) / sourcePageHeight).coerceIn(1, 100)
+       printable.measure(
+        android.view.View.MeasureSpec.makeMeasureSpec(cssWidth, android.view.View.MeasureSpec.EXACTLY),
+        android.view.View.MeasureSpec.makeMeasureSpec(sourcePageHeight, android.view.View.MeasureSpec.EXACTLY)
+       )
+       printable.layout(0, 0, cssWidth, sourcePageHeight)
+       val cssHeight = printable.contentHeight.coerceAtLeast(sourcePageHeight)
+       val pages = ((cssHeight + sourcePageHeight - 1) / sourcePageHeight).coerceIn(1, 100)
+       val pdf = android.graphics.pdf.PdfDocument()
        for (i in 0 until pages) {
+        printable.scrollTo(0, i * sourcePageHeight)
         val page = pdf.startPage(android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i + 1).create())
         page.canvas.drawColor(android.graphics.Color.WHITE)
         page.canvas.save()
         page.canvas.scale(scale, scale)
-        page.canvas.translate(0f, -(i * sourcePageHeight).toFloat())
         printable.draw(page.canvas)
         page.canvas.restore()
         pdf.finishPage(page)
