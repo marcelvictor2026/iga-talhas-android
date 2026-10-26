@@ -3,6 +3,8 @@ package br.com.giga.talhas
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
+import android.widget.Toast
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -22,6 +24,7 @@ import java.net.URL
 
 class MainActivity : Activity() {
  private lateinit var web: WebView
+ private var ultimoVoltarEm: Long = 0L
  private var backupPending: String? = null
  private var fileCallback: ValueCallback<Array<Uri>>? = null
  private var cameraUri: Uri? = null
@@ -68,6 +71,15 @@ class MainActivity : Activity() {
   web.addJavascriptInterface(Bridge(), "GigaAndroid")
   setContentView(web)
   web.loadUrl("file:///android_asset/index.html")
+ }
+ override fun onBackPressed() {
+  val agora = SystemClock.elapsedRealtime()
+  if (agora - ultimoVoltarEm <= 2000L) {
+   super.onBackPressed()
+  } else {
+   ultimoVoltarEm = agora
+   Toast.makeText(this, "Pressione Voltar novamente para sair do GIGA TALHAS.", Toast.LENGTH_SHORT).show()
+  }
  }
  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
   super.onActivityResult(requestCode, resultCode, data)
