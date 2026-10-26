@@ -172,60 +172,85 @@ class MainActivity : Activity() {
    val printable = WebView(this@MainActivity)
    printable.settings.javaScriptEnabled = false
    printable.settings.defaultTextEncodingName = "UTF-8"
+   val root = window.decorView as android.view.ViewGroup
+   root.addView(printable, android.view.ViewGroup.LayoutParams(794, 1123))
+   printable.alpha = 0f
+   var started = false
+   fun cleanup() {
+    try { root.removeView(printable); printable.destroy() } catch (_: Exception) {}
+   }
+   fun fail(message: String) {
+    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+    web.evaluateJavascript("alert(" + JSONObject.quote(message) + ")", null)
+    cleanup()
+   }
    printable.webViewClient = object : WebViewClient() {
     override fun onPageFinished(view: WebView?, url: String?) {
+     if (started) return
+     started = true
      printable.postDelayed({
       try {
-       val width = 794
-       val pageWidth = 595
-       val pageHeight = 842
-       printable.measure(
-        android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
-        android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
-       )
-       val contentHeight = maxOf(printable.measuredHeight, (printable.contentHeight * printable.scale).toInt(), 1)
-       printable.layout(0, 0, width, contentHeight)
-       val pdf = android.graphics.pdf.PdfDocument()
-       val scale = pageWidth.toFloat() / width
-       val sourcePageHeight = (pageHeight / scale).toInt()
-       val pages = ((contentHeight + sourcePageHeight - 1) / sourcePageHeight).coerceIn(1, 100)
-       for (i in 0 until pages) {
-        val page = pdf.startPage(android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i + 1).create())
-        page.canvas.drawColor(android.graphics.Color.WHITE)
-        page.canvas.save()
-        page.canvas.scale(scale, scale)
-        page.canvas.translate(0f, -(i * sourcePageHeight).toFloat())
-        printable.draw(page.canvas)
-        page.canvas.restore()
-        pdf.finishPage(page)
-       }
-       val dir = File(cacheDir, "shared_os").apply { mkdirs() }
        val safeName = fileName.replace(Regex("[^a-zA-Z0-9_.-]"), "_").take(100)
-       val output = File(dir, if (safeName.endsWith(".pdf")) safeName else "$safeName.pdf")
-       output.outputStream().use { pdf.writeTo(it) }
-       pdf.close()
-       val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
-       val send = Intent(Intent.ACTION_SEND).apply {
-        type = "application/pdf"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        putExtra(Intent.EXTRA_SUBJECT, "GIGA TALHAS - Ordem de Serviço")
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        clipData = android.content.ClipData.newUri(contentResolver, "Ordem de Serviço PDF", uri)
-       }
-       if (destino == "whatsapp") {
-        try {
-         startActivity(Intent(send).apply { setPackage("com.whatsapp") })
-        } catch (e: Exception) {
-         Toast.makeText(this@MainActivity, "Não foi possível abrir o WhatsApp. Escolha um aplicativo para enviar o PDF.", Toast.LENGTH_LONG).show()
-         startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
+       val folder = File(cacheDir, "shared_os").apply { mkdirs() }
+       val output = File(folder, if (safeName.endsWith(".pdf")) safeName else "$safeName.pdf")
+       val adapter = printable.createPrintDocumentAdapter("GIGA TALHAS - OS")
+       val attributes = PrintAttributes.Builder()
+        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+        .setResolution(PrintAttributes.Resolution("pdf", "PDF", 300, 300))
+        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+        .build()
+       adapter.onStart()
+       adapter.onLayout(null, attributes, null, object : android.print.PrintDocumentAdapter.LayoutResultCallback() {
+        override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
+         try {
+          val descriptor = ParcelFileDescriptor.open(output, ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_TRUNCATE)
+          adapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, null, object : android.print.PrintDocumentAdapter.WriteResultCallback() {
+           override fun onWriteFinished(pages: Array<out PageRange>?) {
+            try {
+             descriptor.close()
+             adapter.onFinish()
+             if (!output.exists() || output.length() == 0L) throw Exception("PDF vazio")
+             val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
+             val send = Intent(Intent.ACTION_SEND).apply {
+              type = "application/pdf"
+              putExtra(Intent.EXTRA_STREAM, uri)
+              putExtra(Intent.EXTRA_SUBJECT, "GIGA TALHAS - Ordem de Serviço")
+              addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+              clipData = android.content.ClipData.newUri(contentResolver, "Ordem de Serviço PDF", uri)
+             }
+             try {
+              if (destino == "whatsapp") {
+               startActivity(Intent(send).apply { setPackage("com.whatsapp") })
+              } else {
+               startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
+              }
+             } catch (_: Exception) {
+              startActivity(Intent.createChooser(send, "Escolher aplicativo para compartilhar PDF"))
+             }
+             cleanup()
+            } catch (e: Exception) { fail("Não foi possível compartilhar o PDF: " + (e.message ?: "erro desconhecido")) }
+           }
+           override fun onWriteFailed(error: CharSequence?) {
+            try { descriptor.close() } catch (_: Exception) {}
+            adapter.onFinish()
+            fail("Falha ao salvar PDF: " + (error ?: "erro desconhecido"))
+           }
+           override fun onWriteCancelled() {
+            try { descriptor.close() } catch (_: Exception) {}
+            adapter.onFinish()
+            fail("Compartilhamento do PDF cancelado.")
+           }
+          })
+         } catch (e: Exception) { adapter.onFinish(); fail("Falha ao preparar PDF: " + (e.message ?: "erro desconhecido")) }
         }
-       } else {
-        startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
-       }
-      } catch (e: Exception) {
-       Toast.makeText(this@MainActivity, "Falha ao gerar PDF: " + (e.message ?: "erro desconhecido"), Toast.LENGTH_LONG).show()
-      } finally { printable.destroy() }
-     }, 800)
+        override fun onLayoutFailed(error: CharSequence?) {
+         adapter.onFinish()
+         fail("Falha na montagem do PDF: " + (error ?: "erro desconhecido"))
+        }
+        override fun onLayoutCancelled() { adapter.onFinish(); fail("Montagem do PDF cancelada.") }
+       }, null)
+      } catch (e: Exception) { fail("Falha ao iniciar PDF: " + (e.message ?: "erro desconhecido")) }
+     }, 400)
     }
    }
    printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
