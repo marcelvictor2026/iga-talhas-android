@@ -298,6 +298,15 @@ function abrirOsLeitura(indice){
 }
 function fecharLeituraOs(){$('leituraOs').classList.add('hide');$('leituraConteudo').innerHTML=''}
 let destinoCompartilharPdf='outros';
+function apagarOs(indice){
+ const os=dataStore.ordens[indice];
+ if(!os)return alert('Ordem de serviço não encontrada.');
+ if(!confirm('Deseja realmente apagar a O.S. Nº '+os.numero+'? Esta ação é permanente e não poderá ser desfeita.'))return;
+ dataStore.ordens.splice(indice,1);
+ salvar();
+ render();
+ alert('O.S. Nº '+os.numero+' apagada com sucesso.');
+}
 function compartilharSelecionadas(){
  const indices=[...document.querySelectorAll('.selecao-os:checked')].map(el=>Number(el.value));
  if(!indices.length)return alert('Marque uma O.S. na pasta do histórico antes de compartilhar.');
@@ -330,7 +339,7 @@ render=function(){
  });
  $('historico').innerHTML=Object.keys(grupos).sort().reverse().map(ch=>{
    let titulo=ch==='Sem data'?ch:new Date(ch+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-   return '<details class="month"><summary><span class="pasta-nome">'+esc(titulo)+'</span><span class="pasta-contagem">'+grupos[ch].length+' O.S.</span></summary>'+grupos[ch].map(o=>'<div class="item"><label class="linha-selecao"><input type="checkbox" class="selecao-os" value="'+dataStore.ordens.indexOf(o)+'"><span><b>📄 O.S. '+esc(o.numero)+'</b> — '+esc(o.patrimonio)+'<br><small>'+esc(o.fim?dt(o.fim):o.data)+' • '+esc(o.tecnico)+' • '+esc(o.situacao)+'</small></span></label><button class="secondary" onclick="abrirOsLeitura('+dataStore.ordens.indexOf(o)+')">Abrir para leitura</button><button onclick="printOs('+dataStore.ordens.indexOf(o)+')">Imprimir / Salvar PDF desta O.S.</button></div>').join('')+'</details>';
+   return '<details class="month"><summary><span class="pasta-nome">'+esc(titulo)+'</span><span class="pasta-contagem">'+grupos[ch].length+' O.S.</span></summary>'+grupos[ch].map(o=>'<div class="item"><label class="linha-selecao"><input type="checkbox" class="selecao-os" value="'+dataStore.ordens.indexOf(o)+'"><span><b>📄 O.S. '+esc(o.numero)+'</b> — '+esc(o.patrimonio)+'<br><small>'+esc(o.fim?dt(o.fim):o.data)+' • '+esc(o.tecnico)+' • '+esc(o.situacao)+'</small></span></label><button class="secondary" onclick="abrirOsLeitura('+dataStore.ordens.indexOf(o)+')">Abrir para leitura</button><button onclick="printOs('+dataStore.ordens.indexOf(o)+')">Imprimir / Salvar PDF desta O.S.</button><button class="secondary" onclick="apagarOs('+dataStore.ordens.indexOf(o)+')">🗑 Apagar O.S.</button></div>').join('')+'</details>';
  }).join('')||'Nenhuma inspeção salva';
  if(dataStore.ativa)mostrarAtiva();
 };
