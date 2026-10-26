@@ -54,7 +54,7 @@ nav.topnav{display:none}
 @keyframes balancarCadeado{0%,100%{transform:translateY(-50%) rotate(0)}20%,60%{transform:translateY(-50%) rotate(-16deg)}40%,80%{transform:translateY(-50%) rotate(16deg)}}
 #btnSalvarOs.balancar #iconeSalvarOs{animation:balancarCadeado .48s ease-in-out}
 #btnSalvarOs[aria-disabled="true"]{cursor:pointer!important}
-.credito-desenvolvedor{position:fixed;bottom:4px;right:10px;z-index:25;text-align:right;font-size:10px;font-weight:400;letter-spacing:.3px;color:#e5faff;text-shadow:0 0 4px #bdeeff77,0 0 9px #bdeeff33;opacity:.72;pointer-events:none;margin:0}@media print{.credito-desenvolvedor{display:none!important}}
+.credito-desenvolvedor{position:fixed;bottom:calc(75px + env(safe-area-inset-bottom));right:10px;z-index:25;text-align:right;font-size:10px;font-weight:400;letter-spacing:.3px;color:#e5faff;text-shadow:0 0 4px #bdeeff77,0 0 9px #bdeeff33;opacity:.72;pointer-events:none;margin:0;max-width:65vw}@media print{.credito-desenvolvedor{display:none!important}}
 
 /* Destaque neon discreto na logomarca, preservando as cores originais. */
 header .brand-icon{border:1px solid #6deaff;box-shadow:0 0 0 1px #50dfff55,0 0 12px #37dcff88,0 0 25px #00cfff44,inset 0 0 8px #74eaff33}
