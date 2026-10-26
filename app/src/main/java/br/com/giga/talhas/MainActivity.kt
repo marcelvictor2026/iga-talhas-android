@@ -196,14 +196,18 @@ class MainActivity : Activity() {
       val documentHeight = heightText.trim('"').toIntOrNull() ?: 1123
       printable.postDelayed({
       try {
-       val width = 794
+       // CSS usa pixels logicos (dp); PdfDocument desenha em pixels fisicos.
+       // Aplicar a densidade evita ampliacao e corte do documento em aparelhos Android.
+       val density = resources.displayMetrics.density
+       val cssWidth = 794
+       val width = (cssWidth * density).toInt()
        val pageWidth = 595
        val pageHeight = 842
+       val contentHeight = (documentHeight * density).toInt().coerceAtLeast((1123 * density).toInt())
        printable.measure(
         android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
-        android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+        android.view.View.MeasureSpec.makeMeasureSpec(contentHeight, android.view.View.MeasureSpec.EXACTLY)
        )
-       val contentHeight = maxOf(documentHeight, 1123)
        printable.layout(0, 0, width, contentHeight)
        val pdf = android.graphics.pdf.PdfDocument()
        val scale = pageWidth.toFloat() / width
