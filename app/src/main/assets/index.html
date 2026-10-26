@@ -114,11 +114,23 @@ function addTalha(){
  const t={id:Date.now().toString(),clienteId:dataStore.cliente.id,pat,fab:$('fab').value,mod:$('mod').value,cap:$('cap').value,local:$('local').value};
  dataStore.talhas.push(t);persist();['pat','fab','mod','cap','local'].forEach(k=>$(k).value='');render();alert('Talha vinculada ao cliente '+dataStore.cliente.nome+'.');
 }
+function apagarTalha(id){
+ const talha=dataStore.talhas.find(t=>t.id===id);
+ if(!talha)return alert('Equipamento não encontrado.');
+ if(dataStore.ativa&&dataStore.ativa.talhaId===id)return alert('Não é possível apagar este equipamento enquanto sua O.S. estiver em andamento.');
+ const historico=dataStore.ordens.filter(o=>o.talhaId===id||o.equipamentoId===id);
+ const aviso='Deseja apagar o equipamento "'+talha.pat+'"?'+(historico.length?'\nAs '+historico.length+' O.S. finalizadas permanecerão no histórico.':'')+'\nEsta exclusão não poderá ser desfeita.';
+ if(!confirm(aviso))return;
+ dataStore.talhas=dataStore.talhas.filter(t=>t.id!==id);
+ persist();
+ render();
+ alert('Equipamento apagado do cadastro.');
+}
 function render(){
  const talhas=talhasDoCliente();
  const razao=$('razaoSocialTalha');if(razao){razao.innerHTML='<option value="">Selecione um cliente cadastrado</option>'+dataStore.clientes.filter(c=>c.nome).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>').join('');razao.value=dataStore.cliente.id||'';}
  $('clienteTalhaSelecionado').textContent='Cliente: '+(dataStore.cliente.nome||'Não selecionado');
- $('lista').innerHTML=talhas.map(t=>'<div class="item"><b>'+esc(t.pat)+'</b> — '+esc(t.fab)+' '+esc(t.mod)+'<br><small>'+esc(t.local)+' • '+esc(t.cap)+'</small></div>').join('')||'Nenhuma talha cadastrada para este cliente.';
+ $('lista').innerHTML=talhas.map(t=>'<div class="item"><b>'+esc(t.pat)+'</b> — '+esc(t.fab)+' '+esc(t.mod)+'<br><small>'+esc(t.local)+' • '+esc(t.cap)+'</small><br><button type="button" class="secondary" onclick="apagarTalha(\''+esc(t.id)+'\')">🗑 Apagar equipamento</button></div>').join('')||'Nenhuma talha cadastrada para este cliente.';
  const selecionado=dataStore.ativa?.talhaId||$('talha').value;
  $('talha').innerHTML=talhas.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.pat)+' — '+esc(t.local)+'</option>').join('');
  if(talhas.some(t=>t.id===selecionado))$('talha').value=selecionado;
