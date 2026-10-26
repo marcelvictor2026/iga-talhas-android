@@ -303,7 +303,7 @@ function apagarOs(indice){
  if(!os)return alert('Ordem de serviço não encontrada.');
  if(!confirm('Deseja realmente apagar a O.S. Nº '+os.numero+'? Esta ação é permanente e não poderá ser desfeita.'))return;
  dataStore.ordens.splice(indice,1);
- salvar();
+ localStorage.setItem(KEY,JSON.stringify(dataStore));
  render();
  alert('O.S. Nº '+os.numero+' apagada com sucesso.');
 }
