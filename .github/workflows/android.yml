@@ -37,7 +37,7 @@ jobs:
               assert element in html, f'Elemento ausente: {element}'
           assert 'function exportarBackup()' in html
           assert 'function restaurarBackupRecebido(raw)' in html
-          assert 'function printOs(indice)' in html
+          assert 'function printOs(indice,compartilharPdf=false)' in html
           PY
           node --check /tmp/giga-talhas.js
       - name: Compilar APK de teste
