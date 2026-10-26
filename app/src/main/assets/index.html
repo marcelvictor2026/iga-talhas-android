@@ -83,8 +83,10 @@ dataStore.cliente=dataStore.cliente||{nome:''};dataStore.clientes=Array.isArray(
 if(dataStore.clientes.length===1&&dataStore.cliente.id){dataStore.talhas.forEach(t=>{if(!t.clienteId)t.clienteId=dataStore.cliente.id})}
 const itens=['Carcaça e fixações','Gancho e trava de segurança','Corrente ou cabo de aço','Redutor e lubrificação','Freio','Cabos e conexões elétricas','Botoeira e comandos','Fim de curso (quando aplicável)','Parada de emergência (quando aplicável)','Subida','Descida','Avanço','Retorno'];
 const $=id=>document.getElementById(id); const persist=()=>localStorage.setItem(KEY,JSON.stringify(dataStore)); const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-document.addEventListener('focusin',e=>{if(e.target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select'))document.querySelector('.bottomnav')?.classList.add('teclado-aberto')});
-document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement?.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select'))document.querySelector('.bottomnav')?.classList.remove('teclado-aberto')},150)});
+const campoTextoAtivo=el=>Boolean(el?.matches?.('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]),textarea,[contenteditable="true"]'));
+function atualizarBarraTeclado(){const oculta=campoTextoAtivo(document.activeElement);document.querySelector('.bottomnav')?.classList.toggle('teclado-aberto',oculta)}
+document.addEventListener('focusin',atualizarBarraTeclado);
+document.addEventListener('focusout',()=>setTimeout(atualizarBarraTeclado,100));
 function page(id){document.activeElement?.blur?.();document.querySelector('.bottomnav')?.classList.remove('teclado-aberto');['home','equip','os','hist','cad','config'].forEach(k=>$(k).classList.toggle('hide',k!==id));document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));render();window.scrollTo(0,0)}
 let criandoCliente=false;
 function novoCliente(){if(dataStore.ativa)return alert('Salve a ordem de serviço antes de cadastrar outro cliente.');criandoCliente=true;['cliNome','cliDoc','cliEnd','cliTel','cliEmail'].forEach(id=>$(id).value='');$('cliSaveStatus').textContent='Preencha o nome do novo cliente e salve.';$('cliNome').focus()}
