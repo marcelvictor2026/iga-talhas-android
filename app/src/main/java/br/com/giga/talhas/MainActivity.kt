@@ -101,6 +101,15 @@ class MainActivity : Activity() {
   }
  }
  inner class Bridge {
+  @JavascriptInterface fun shareText(value: String) { runOnUiThread {
+   val intent = Intent(Intent.ACTION_SEND).apply {
+    type = "text/plain"
+    putExtra(Intent.EXTRA_SUBJECT, "GIGA TALHAS - Ordens de serviço")
+    putExtra(Intent.EXTRA_TEXT, value)
+   }
+   startActivity(Intent.createChooser(intent, "Enviar ordens de serviço"))
+  } }
+
   @JavascriptInterface fun consultarCnpj(cnpj: String, campo: String) {
    if (!cnpj.matches(Regex("[0-9]{14}")) || campo !in listOf("cli","exe")) return
    Thread {
