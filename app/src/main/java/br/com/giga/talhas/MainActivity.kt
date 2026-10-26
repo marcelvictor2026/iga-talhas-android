@@ -212,14 +212,15 @@ class MainActivity : Activity() {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         clipData = android.content.ClipData.newUri(contentResolver, "Ordem de Serviço PDF", uri)
        }
-       if (destino == "whatsapp" || destino == "business") {
-        send.setPackage(if (destino == "business") "com.whatsapp.w4b" else "com.whatsapp")
-        try { startActivity(send) }
-        catch (e: android.content.ActivityNotFoundException) {
-         Toast.makeText(this@MainActivity, "WhatsApp selecionado não está instalado neste celular.", Toast.LENGTH_LONG).show()
+       if (destino == "whatsapp") {
+        try {
+         startActivity(Intent(send).apply { setPackage("com.whatsapp") })
+        } catch (e: Exception) {
+         Toast.makeText(this@MainActivity, "Não foi possível abrir o WhatsApp. Escolha um aplicativo para enviar o PDF.", Toast.LENGTH_LONG).show()
+         startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
         }
        } else {
-        startActivity(Intent.createChooser(send, "Escolher aplicativo para enviar PDF"))
+        startActivity(Intent.createChooser(send, "Compartilhar PDF da O.S."))
        }
       } catch (e: Exception) {
        Toast.makeText(this@MainActivity, "Falha ao gerar PDF: " + (e.message ?: "erro desconhecido"), Toast.LENGTH_LONG).show()
