@@ -32,6 +32,10 @@ nav.topnav{display:none}
 
 .aviso-verde{position:fixed;top:78px;left:5%;width:90%;max-width:560px;z-index:1000;padding:14px 17px;border:1px solid #24d486;border-radius:12px;background:#063d2a;color:#c8ffe2;font-weight:700;box-shadow:0 12px 30px #0009}.campo-ok{border:2px solid #24c878!important;background:#0b3327!important}.status-ok{color:#43ef9d!important;font-weight:700}.campo-pendente{border-color:#c68b33!important}details.detalhe-campo{border:1px solid #345b52;border-radius:10px;padding:10px;margin:10px 0}details.detalhe-campo summary{cursor:pointer;color:#57e6a0;font-weight:700}details.detalhe-campo textarea{margin-top:10px}
 
+#checks select.check-amarelo{background:#5c450c!important;border:2px solid #f5c542!important;color:#ffe89a!important;font-weight:700}
+#checks select.check-vermelho{background:#571c24!important;border:2px solid #ff5364!important;color:#ffd3d8!important;font-weight:700}
+#checks select.check-verde{background:#103e2d!important;border:2px solid #24d486!important;color:#a1ffd0!important;font-weight:700}
+#checks select.check-neutro{background:#26394c!important;border:2px solid #7695ad!important;color:#e3edf5!important}
 #servOpcoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;margin:8px 0 14px}
 #servOpcoes label{display:flex;flex-direction:row;align-items:center;gap:9px;min-height:39px;margin:0;padding:7px 9px;border:1px solid #355063;border-radius:9px;background:#10202c;color:#dce7ef;font-size:13px;line-height:1.25;cursor:pointer;transition:background .15s,border-color .15s}
 #servOpcoes input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:0;padding:0;accent-color:#24d486;cursor:pointer}
@@ -120,11 +124,12 @@ function validarCamposOs(){
  const atualizar=(el,ok)=>{if(!el)return;el.classList.toggle('campo-ok',ok);el.classList.toggle('campo-pendente',!ok)};
  atualizar(tec,!!tec.value.trim());atualizar(resp,!com||!!resp.value.trim());
  let completo=!!tec.value.trim()&&(!com||!!resp.value.trim());
- for(let i=0;i<itens.length;i++){let el=$('c'+i);if(!el)continue;let ok=el.value!=='Não verificado';atualizar(el,ok);completo=completo&&ok}
+ for(let i=0;i<itens.length;i++){let el=$('c'+i);if(!el)continue;let ok=el.value!=='Não verificado';el.classList.remove('campo-ok','campo-pendente','check-amarelo','check-vermelho','check-verde','check-neutro');el.classList.add(el.value==='Não verificado'?'check-amarelo':el.value==='Não conforme'?'check-vermelho':el.value==='Conforme'?'check-verde':'check-neutro');completo=completo&&ok}
  const status=$('finalizarStatus');if(status){status.textContent=completo?'✓ Campos obrigatórios preenchidos. Pronto para finalizar.':'Preencha os campos obrigatórios destacados para finalizar.';status.classList.toggle('status-ok',completo)}
 }
 document.addEventListener('input',e=>{if(e.target.closest('#os'))validarCamposOs()});
 document.addEventListener('change',e=>{if(e.target.closest('#os'))validarCamposOs()});
+validarCamposOs();
 const dt=iso=>new Date(iso).toLocaleString('pt-BR');
 function toggleAss(){let com=$('modoAss').value==='com';$('areaAss').classList.toggle('hide',!com);validarCamposOs()}
 function abrirOuContinuar(){if(!dataStore.talhas.length)return alert('Cadastre uma talha antes de abrir a O.S.');page('os');if(!dataStore.ativa)iniciarOsSelecionada();else mostrarAtiva();validarCamposOs()}
