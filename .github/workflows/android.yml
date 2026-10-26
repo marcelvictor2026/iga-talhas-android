@@ -24,6 +24,22 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Validar JavaScript e elementos principais da interface
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script[^>]*>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1, 'Esperado um script principal'
+          Path('/tmp/giga-talhas.js').write_text(scripts[0], encoding='utf-8')
+          for element in ('id="equip"', 'id="os"', 'id="hist"', 'id="cad"', 'id="historico"'):
+              assert element in html, f'Elemento ausente: {element}'
+          assert 'function exportarBackup()' in html
+          assert 'function restaurarBackupRecebido(raw)' in html
+          assert 'function printOs(indice)' in html
+          PY
+          node --check /tmp/giga-talhas.js
       - name: Compilar APK de teste
         run: gradle --no-daemon assembleDebug
       - name: Publicar APK
