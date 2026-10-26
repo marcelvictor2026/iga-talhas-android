@@ -15,17 +15,6 @@ import java.io.File
 import android.webkit.WebResourceRequest
 import android.print.PrintAttributes
 import android.print.PrintManager
-import android.print.PrintDocumentAdapter
-import android.print.PageRange
-import android.print.PrintDocumentInfo
-import android.os.ParcelFileDescriptor
-import android.os.CancellationSignal
-import android.os.Environment
-import android.os.Build
-import android.content.ContentValues
-import android.provider.MediaStore.Files
-import android.provider.MediaStore.MediaColumns
-import android.widget.Toast
 import android.content.Context
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -41,7 +30,6 @@ class MainActivity : Activity() {
  private val IMPORT_REQUEST = 202
  override fun onCreate(savedInstanceState: Bundle?) {
   super.onCreate(savedInstanceState)
-  File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "GIGAAPP").mkdirs()
   web = WebView(this)
   web.settings.javaScriptEnabled = true
   web.settings.domStorageEnabled = true
@@ -162,84 +150,6 @@ class MainActivity : Activity() {
     type = "application/json"
    }
    startActivityForResult(intent, IMPORT_REQUEST)
-  } }
-  @JavascriptInterface fun savePdf(html: String, number: String) { runOnUiThread {
-   val safeNumber = number.replace(Regex("[^0-9A-Za-z_-]"), "_").take(40)
-   val fileName = "OS-" + safeNumber + ".pdf"
-   val printable = WebView(this@MainActivity)
-   printable.settings.javaScriptEnabled = false
-   printable.webViewClient = object : WebViewClient() {
-    override fun onPageFinished(view: WebView?, url: String?) {
-     val adapter = printable.createPrintDocumentAdapter(fileName)
-     val attributes = PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-      .setResolution(PrintAttributes.Resolution("pdf", "PDF", 300, 300))
-      .setMinMargins(PrintAttributes.Margins.NO_MARGINS).build()
-     adapter.onStart()
-     adapter.onLayout(null, attributes, CancellationSignal(), object : PrintDocumentAdapter.LayoutResultCallback() {
-      override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
-       var uri: Uri? = null
-       var file: File? = null
-       try {
-        val descriptor: ParcelFileDescriptor
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-         val values = ContentValues().apply {
-          put(MediaColumns.DISPLAY_NAME, fileName)
-          put(MediaColumns.MIME_TYPE, "application/pdf")
-          put(MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/GIGAAPP")
-          put(MediaColumns.IS_PENDING, 1)
-         }
-         uri = contentResolver.insert(Files.getContentUri("external"), values)
-          ?: throw IllegalStateException("Não foi possível criar o arquivo")
-         descriptor = contentResolver.openFileDescriptor(uri!!, "w")
-          ?: throw IllegalStateException("Não foi possível abrir o arquivo")
-        } else {
-         val folder = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "GIGAAPP").apply { mkdirs() }
-         file = File(folder, fileName)
-         descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_READ_WRITE)
-        }
-        val savedUri = uri
-        val savedFile = file
-        adapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(), object : PrintDocumentAdapter.WriteResultCallback() {
-         override fun onWriteFinished(pages: Array<out PageRange>?) {
-          try {
-           descriptor.close()
-           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && savedUri != null) {
-            contentResolver.update(savedUri, ContentValues().apply { put(MediaColumns.IS_PENDING, 0) }, null, null)
-           }
-           Toast.makeText(this@MainActivity, "PDF salvo em GIGAAPP: " + fileName, Toast.LENGTH_LONG).show()
-          } catch (e: Exception) {
-           Toast.makeText(this@MainActivity, "Erro ao concluir o PDF", Toast.LENGTH_LONG).show()
-          } finally { adapter.onFinish(); printable.destroy() }
-         }
-         override fun onWriteFailed(error: CharSequence?) {
-          descriptor.close()
-          if (savedUri != null) contentResolver.delete(savedUri, null, null)
-          savedFile?.delete()
-          Toast.makeText(this@MainActivity, "Não foi possível salvar o PDF", Toast.LENGTH_LONG).show()
-          adapter.onFinish(); printable.destroy()
-         }
-         override fun onWriteCancelled() {
-          descriptor.close()
-          if (savedUri != null) contentResolver.delete(savedUri, null, null)
-          savedFile?.delete()
-          adapter.onFinish(); printable.destroy()
-         }
-        })
-       } catch (e: Exception) {
-        if (uri != null) contentResolver.delete(uri, null, null)
-        file?.delete()
-        Toast.makeText(this@MainActivity, "Falha ao criar PDF em GIGAAPP", Toast.LENGTH_LONG).show()
-        adapter.onFinish(); printable.destroy()
-       }
-      }
-      override fun onLayoutFailed(error: CharSequence?) {
-       Toast.makeText(this@MainActivity, "Falha ao preparar PDF", Toast.LENGTH_LONG).show()
-       adapter.onFinish(); printable.destroy()
-      }
-     }, null)
-    }
-   }
-   printable.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
   } }
   @JavascriptInterface fun printHtml(html: String) { runOnUiThread {
    val printable = WebView(this@MainActivity)
